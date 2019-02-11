@@ -15,8 +15,6 @@ menu = '''
 5. Check weather details of desired city          
 '''
 
-
-# delete from file code is remaining
 def weather_details(city_name):
     api_key = "8a36d39fa8339df10e5711b9e79e8311"
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
