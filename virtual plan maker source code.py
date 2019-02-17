@@ -4,8 +4,6 @@ import pickle
 import datetime
 import smtplib
 
-plan = []
-i = -1
 menu = '''
           welcome to the Application
 1. Add a Plan
@@ -15,20 +13,24 @@ menu = '''
 5. Check weather details of desired city          
 '''
 
+
 def weather_details(city_name):
     api_key = "8a36d39fa8339df10e5711b9e79e8311"
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
     comp_url = base_url + "appid=" + api_key + "&q=" + city_name
     response = requests.get(comp_url)
     x = response.json()
-    print("Temperature (in kelvin unit) = ", x['main']['temp'], "\nMinimum Temperature (in kelvin unit) = ",
-          x['main']['temp_min'],
-          "\nMaximum Temperature (in kelvin unit) = ", x['main']['temp_max'],
-          "\nAtmospheric pressure (in hPa unit) = ",
-          x['main']['pressure'], "\nHumidity (in percentage) =",
-          x['main']['humidity'], "\nVisibility (in metre unit)=", x['visibility'], "\nWind speed(in km/hr unit) =",
-          x['wind']['speed'],
-          "\nDescription = ", x['weather'][0]["description"])
+    if x["cod"] != "404":
+        print("Temperature (in kelvin unit) = ", x['main']['temp'], "\nMinimum Temperature (in kelvin unit) = ",
+              x['main']['temp_min'],
+              "\nMaximum Temperature (in kelvin unit) = ", x['main']['temp_max'],
+              "\nAtmospheric pressure (in hPa unit) = ",
+              x['main']['pressure'], "\nHumidity (in percentage) =",
+              x['main']['humidity'], "\nVisibility (in metre unit)=", x['visibility'], "\nWind speed(in km/hr unit) =",
+              x['wind']['speed'],
+              "\nDescription = ", x['weather'][0]["description"])
+    else:
+        print('city not found')
 
 
 def view_plans():
@@ -40,32 +42,30 @@ def view_plans():
             print(t + 1, ". ", plan[t]['temp'])
 
 
-def add_plan_to_file(object):
-    f = open("file.dat", 'ab+')
-    pickle.dump(object, f)
-    f.close()
-
-
 def retrieve_data():
-    f = open("file.dat", 'ab+')
-    list = []
-    while 1:
-        try:
-            list = pickle.load(f)
-        except EOFError:
-            object = None
-            break
-    f.close()
+    list = [[], -1]
+    try:
+        f = open("data.dat", 'rb')
+        for c in range(2):
+            try:
+                list[c] = pickle.load(f)
+            except EOFError:
+                pass
+        f.close()
+    except FileNotFoundError:
+        pass
     return list
 
 
-def saving_changes(object):
-    f = open('file.dat', 'wb')
+def saving_changes(object, counter):
+    f = open('data.dat', 'wb')
     pickle.dump(object, f)
+    pickle.dump(counter, f)
+    f.close()
 
 
 def send_email(id, password, message, receiver):
-    s = smtplib.SMTP("smtp.google.com", 587)
+    s = smtplib.SMTP("smtp.gmail.com", 587)
     s.starttls()
     s.login(id, password)
     for q in receiver:
@@ -73,12 +73,9 @@ def send_email(id, password, message, receiver):
     s.quit()
 
 
-plan = retrieve_data()
-ctr = -1
-for var in plan:
-    ctr = ctr + 1
-    if var['date'] > datetime.datetime.now().strftime("%d-%m-%y"):
-        plan.pop(ctr)
+temp = retrieve_data()
+plan = temp[0]
+i = temp[1]
 
 while 1:
     print(menu)
@@ -95,9 +92,8 @@ while 1:
         plan[i]["temp"] = input("\nENTER NAME BY WHICH YOU WANT TO CALL  YOUR PLAN:")
         plan[i]['city'] = input("ENTER DESIRED CITY :")
         plan[i]['place'] = input("ENTER DESIRED PLACE:")
-        plan[i]['date'] = input("ENTER DATE:")
+        plan[i]['date'] = input("ENTER DATE IN FORMAT DD-MM-YY:")
         plan[i]['mail'] = [element for element in input("ENTER EMAIL ID OF OTHER MEMBERS  OF THE PLAN:\n").split()]
-        add_plan_to_file(plan[i])
         print("\nYOUR PLAN HAS BEEN SUCCESSFULLY ADDED\n")
         x = int(input("TO GO BACK TO MENU PRESS 0 AND TO END PRESS 1"))
         if x == 0:
@@ -119,12 +115,12 @@ while 1:
                       plan[choice - 1]["place"],
                       "\nDate:",
                       plan[choice - 1]["date"])
-                print("email id\n:")
+                print("email id:\n")
                 for e in plan[choice - 1]['mail']:
                     print(e)
                 print("\ncurrent weather conditions at this city is as follows:\n")
                 weather_details(plan[choice - 1]["city"])
-                print("\nDO YOU WANT TO SEND AN EMAIL AS REMINDER? PRESS Y TO CONTINUE")
+                print("\nDO YOU WANT TO SEND AN EMAIL AS REMINDER? PRESS Y FOR YES AND OTHER SOME CHARACTER FOR NO")
                 choice2 = (input())
                 if choice2.lower() == 'y':
                     print("\nTYPE THE MESSAGE THAT YOU WANT TO SEND: ")
@@ -154,25 +150,26 @@ while 1:
                     print("values other than integer are not acceptable")
             if 0 < choice <= i + 1:
                 while 1:
-                    print('''
-                    1. Edit Plan Name
-                    2. Edit City
-                    3. Edit Place
-                    4. Edit Date
-                    5. Edit Email Id
-                    ''')
-                    ch2 = int(input("ENTER CHOICE:"))
+                    print("1. Edit Plan Name\n2. Edit City\n3. Edit Place\n4. Edit Date\n5. Edit Email Id")
+                    while 1:
+                        try:
+                            ch2 = int(input("ENTER CHOICE(ENTER 0 IF YOU DON'T WANT TO EDIT MORE):"))
+                            break
+                        except ValueError:
+                            print("values other than integer are not acceptable")
                     if ch2 == 1:
                         plan[choice - 1]['temp'] = input("ENTER NEW PLAN NAME")
-                    elif ch == 2:
+                    elif ch2 == 2:
                         plan[choice - 1]['city'] = input("ENTER NEW CITY NAME")
-                    elif ch == 3:
+                    elif ch2 == 3:
                         plan[choice - 1]['place'] = input("ENTER NEW PLACE NAME")
-                    elif ch == 4:
+                    elif ch2 == 4:
                         plan[choice - 1]['date'] = input("ENTER NEW DATE NAME")
-                    elif ch == 5:
+                    elif ch2 == 5:
                         plan[choice - 1]['mail'] = [element for element in
                                                     input("ENTER NEW SET OF EMAIL ID:\n").split()]
+                    elif ch2 == 0:
+                        break
                     else:
                         print("INVALID CHOICE")
             else:
@@ -219,4 +216,4 @@ while 1:
             continue
         else:
             break
-saving_changes(plan)
+saving_changes(plan, i)
