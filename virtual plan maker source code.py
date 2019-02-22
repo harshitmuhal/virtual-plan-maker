@@ -15,7 +15,7 @@ menu = '''
 
 
 def weather_details(city_name):
-    api_key = "8a36d39fa8339df10e5711b9e79e8311"
+    api_key = "@@@@"
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
     comp_url = base_url + "appid=" + api_key + "&q=" + city_name
     response = requests.get(comp_url)
